@@ -17,7 +17,7 @@ type HelloWorld struct {
 // HiFromKnative defines the Data of CloudEvent with type=dev.knative.samples.hifromknative
 type HiFromKnative struct {
 	// Msg holds the message from the event
-	Msg string `json:"msg,omitempty,string "`
+	Msg string `json:"msg,omitempty,string"`
 }
 
 func receive(ctx context.Context, event cloudevents.Event) (*cloudevents.Event, cloudevents.Result) {

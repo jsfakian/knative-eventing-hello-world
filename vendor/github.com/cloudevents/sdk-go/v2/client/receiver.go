@@ -10,7 +10,7 @@ import (
 	"github.com/cloudevents/sdk-go/v2/protocol"
 )
 
-// Receive is the signature of a fn to be invoked for incoming cloudevents.
+// ReceiveFull is the signature of a fn to be invoked for incoming cloudevents.
 type ReceiveFull func(context.Context, event.Event) protocol.Result
 
 type receiverFn struct {
@@ -72,7 +72,7 @@ func receiver(fn interface{}) (*receiverFn, error) {
 	return r, nil
 }
 
-func (r *receiverFn) invoke(ctx context.Context, e event.Event) (*event.Event, protocol.Result) {
+func (r *receiverFn) invoke(ctx context.Context, e *event.Event) (*event.Event, protocol.Result) {
 	args := make([]reflect.Value, 0, r.numIn)
 
 	if r.numIn > 0 {
@@ -80,7 +80,7 @@ func (r *receiverFn) invoke(ctx context.Context, e event.Event) (*event.Event, p
 			args = append(args, reflect.ValueOf(ctx))
 		}
 		if r.hasEventIn {
-			args = append(args, reflect.ValueOf(e))
+			args = append(args, reflect.ValueOf(*e))
 		}
 	}
 	v := r.fnValue.Call(args)
@@ -113,16 +113,16 @@ func (r *receiverFn) validateInParamSignature(fnType reflect.Type) error {
 	switch fnType.NumIn() {
 	case 2:
 		// has to be (context.Context, event.Event)
-		if !fnType.In(1).ConvertibleTo(eventType) {
-			return fmt.Errorf("%s; cannot convert parameter 2 from %s to event.Event", inParamUsage, fnType.In(1))
+		if !eventType.ConvertibleTo(fnType.In(1)) {
+			return fmt.Errorf("%s; cannot convert parameter 2 to %s from event.Event", inParamUsage, fnType.In(1))
 		} else {
 			r.hasEventIn = true
 		}
 		fallthrough
 	case 1:
-		if !fnType.In(0).ConvertibleTo(contextType) {
-			if !fnType.In(0).ConvertibleTo(eventType) {
-				return fmt.Errorf("%s; cannot convert parameter 1 from %s to context.Context or event.Event", inParamUsage, fnType.In(0))
+		if !contextType.ConvertibleTo(fnType.In(0)) {
+			if !eventType.ConvertibleTo(fnType.In(0)) {
+				return fmt.Errorf("%s; cannot convert parameter 1 to %s from context.Context or event.Event", inParamUsage, fnType.In(0))
 			} else if r.hasEventIn {
 				return fmt.Errorf("%s; duplicate parameter of type event.Event", inParamUsage)
 			} else {
